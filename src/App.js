@@ -2,7 +2,7 @@ import './App.css'
 import './index.css'
 
 import {useState, useEffect} from "react"
-import { Bstrash, BsBookmarkCheck, BsBookmarkCheckFill} from "react-icons/bs"
+import { BsTrash, BsBookmarkCheck, BsBookmarkCheckFill} from "react-icons/bs"
 
 const API = "http://localhost:5000";
 
@@ -15,17 +15,80 @@ function App() {
   const [ loading, setLoading] = useState(false)
 
 
-const handleSubmit = (e) => {
+//Load todos on page load
+
+useEffect (() => {
+
+  const loadData = async() => {
+    setLoading(true)
+
+    const res = await fetch(API + "/todos") 
+    .then((res) => res.json())
+    .then((data) => data)
+
+    .catch((err) => console.log(err))
+
+    setLoading(false)
+    setTodos(res)
+  };
+  loadData()
+},[]);
+
+
+const handleSubmit = async (e) => {
 e.preventDefault()
-console.log('Enviou')
-console.log("title")
-setTitle('')
+
+const todo = {
+  id: Math.random(),
+  title,
+  time,
+  done:false,
+}
+
+
+
+await fetch ( API + '/todos', {
+  method: "POST",
+  body: JSON.stringify(todo),
+  headers: {
+    "Content-Type": "application/json"
+  }
+})
+
+setTodos((prevState) => [...prevState, todo])
+setTime("")
+setTitle("")
+}
+
+const handleDelete = async (id) => {
+  await fetch ( API + '/todos/' + id, {
+    method: "DELETE",
+    })
+    setTodos((prevState) => prevState.filter((todo) => todo.id !==id))
+}
+
+const handleEdit = async (todo) => {
+todo.done= !todo.done;
+
+  const data = await fetch ( API + '/todos/' + todo.id, {
+    method: "PUT",
+    body: JSON.stringify(todo),
+    headers:{
+      "Content-Type": "application/json",
+    }
+    })
+    setTodos((prevState) => prevState.map((t) => (t.id === data.id ? (t = data) : t))
+    )
+}
+
+if(loading) {
+  return <p>Carregando..</p>
 }
 
   return (
     <div className='app' id='app'>
     <div className='todo-header'>
-    <h1>ToDo</h1></div>
+    <h1>React ToDo</h1></div>
 
 
     <div className='form-todo'>
@@ -37,9 +100,17 @@ setTitle('')
          name='title' 
          placeholder='Titulo da tarefa' 
          onChange={(e) => setTitle(e.target.value)} value={title || ""} required/>
-
       </div>
-      <input type='submit' value="enviar"/>
+
+      <div className='form-control'>
+       <label htmlFor='Title'>Duração</label>
+        <input type='text' 
+         name='time' 
+         placeholder='Tempo estimado (em Horas)' 
+         onChange={(e) => setTime(e.target.value)} value={time || ""} required/>
+      </div>
+
+      <input type='submit' value="Criar Tarefa"/>
       </form>
     
     
@@ -49,6 +120,20 @@ setTitle('')
     <div className='list-todo' id='teste'>
     <h2>Listas de tarefas:</h2>
     {todos.length ===0 && <p>Nao ha tarefas</p>}
+    {todos.map((todo) => (
+      <div className='todo' key={todo.id}>
+        <h3 className={todo.done ? "todo-done" : ''}>{todo.title}</h3>
+        <p>Duração:{todo.time}h</p>
+        <div className='actions'>
+          <span onClick={() => handleEdit(todo)}>
+
+          {!todo.done ? <BsBookmarkCheck/> : <BsBookmarkCheckFill/>} 
+
+          </span>
+          <BsTrash onClick={() => handleDelete(todo.id)} />
+        </div>
+      </div>
+    ))}
     </div>
     </div>
   );
